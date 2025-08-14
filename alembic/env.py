@@ -6,6 +6,16 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
+# Load app settings so alembic can pick up DATABASE_URL from env
+try:
+    from app.core.config import get_settings  # type: ignore
+    settings = get_settings()
+    if settings.database_url:
+        context.config.set_main_option("sqlalchemy.url", settings.database_url)
+except Exception:
+    # Fallback to alembic.ini if app settings cannot be imported
+    pass
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

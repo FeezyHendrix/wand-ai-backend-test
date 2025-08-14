@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -9,8 +9,12 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://user:password@localhost:5432/knowledge_base"
     redis_url: str = "redis://localhost:6379"
     
-    # OpenAI
+    # OpenAI (deprecated - use Ollama instead)
     openai_api_key: Optional[str] = None
+    
+    # Ollama
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.2:1b"  # Small, fast model for reasoning
     
     # Vector Database
     chroma_persist_directory: str = "./chroma_db"
@@ -31,7 +35,7 @@ class Settings(BaseSettings):
     
     # Search
     default_search_limit: int = 10
-    similarity_threshold: float = 0.7
+    similarity_threshold: float = 0.3
     
     class Config:
         env_file = ".env"

@@ -2,7 +2,7 @@
 
 A high-performance, scalable knowledge base system that provides semantic search, intelligent Q&A, and completeness assessment capabilities for large document collections.
 
-## 🚀 Features
+## Features
 
 - **Document Ingestion Pipeline**: Automated processing of PDF, DOCX, TXT, and Markdown files
 - **Vector Embeddings**: Semantic understanding using sentence-transformers 
@@ -13,7 +13,7 @@ A high-performance, scalable knowledge base system that provides semantic search
 - **Large File Support**: Efficient processing of files up to 100MB
 - **RESTful API**: FastAPI-based endpoints with automatic documentation
 
-## 🏗️ Architecture
+##  Architecture
 
 ### Modular Monolith Design
 
@@ -35,10 +35,19 @@ app/
 2. **Embedding Service**: Manages vector generation and storage (ChromaDB)
 3. **Ingestion Service**: Orchestrates the complete ingestion pipeline
 4. **Search Service**: Semantic search with similarity scoring
-5. **QA Service**: Question answering with OpenAI integration
+5. **QA Service**: Question answering with Ollama (Llama3.2:1b) integration
 6. **Incremental Indexer**: Real-time file monitoring and updates
 
-## 🔧 Design Decisions
+## Design Decisions
+
+### LLM: Llama3.2:1b via Ollama
+- **Choice**: Llama3.2:1b over larger models (Llama3.2:3b, GPT-3.5)
+- **Reasoning**:
+  - **Fast inference**: Good balance of speed and quality
+  - **Reasonable resource usage**: ~1.3GB model size
+  - **Local deployment**: No API keys, complete privacy
+  - **Docker-ready**: Seamless containerization
+  - **24h constraint**: Good reasoning capabilities with acceptable performance
 
 ### Vector Storage: ChromaDB
 - **Choice**: ChromaDB over alternatives (Pinecone, Weaviate, FAISS)
@@ -79,12 +88,12 @@ app/
   - Handles concurrent document processing
   - Scales well for multiple simultaneous requests
 
-## 🛠️ Trade-offs (24h Constraint)
+## Trade-offs (24h Constraint)
 
 ### 1. AI Model Integration
-- **Implemented**: OpenAI GPT-3.5-turbo integration (optional)
-- **Trade-off**: Fallback to simple text extraction when OpenAI unavailable
-- **Future**: Custom fine-tuned models for domain-specific Q&A
+- **Implemented**: Ollama with Llama3.2:1b (fast, local inference)
+- **Trade-off**: Balanced reasoning capabilities with good performance
+- **Future**: Support for larger models (llama3.2:3b, llama3.1:8b) based on needs
 
 ### 2. Vector Database Optimization
 - **Implemented**: Basic ChromaDB setup
@@ -111,14 +120,14 @@ app/
 - **Trade-off**: No metrics collection or APM integration
 - **Future**: Prometheus metrics, OpenTelemetry tracing
 
-## 📋 Requirements
+## Requirements
 
 - Python 3.11+
 - PostgreSQL 12+
 - 4GB+ RAM (for embedding model)
 - 10GB+ storage (for document storage and vector index)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Environment Setup
 
@@ -242,8 +251,9 @@ Key configuration options in `.env`:
 # Database
 DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/knowledge_base
 
-# OpenAI (optional)
-OPENAI_API_KEY=your_key_here
+# Ollama (local LLM)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2:1b
 
 # Processing
 MAX_FILE_SIZE_MB=100
@@ -259,7 +269,7 @@ SIMILARITY_THRESHOLD=0.7
 ### Throughput
 - **Document Processing**: ~5MB/minute (varies by content type)
 - **Search Queries**: <200ms for 95th percentile
-- **Q&A Responses**: <2s with OpenAI, <500ms fallback
+- **Q&A Responses**: <1s with Llama3.2:1b, <100ms fallback
 
 ### Scalability
 - **Documents**: Tested with 10,000+ documents
@@ -267,11 +277,12 @@ SIMILARITY_THRESHOLD=0.7
 - **Storage**: Linear scaling with document size
 
 ### Memory Usage
-- **Base**: ~1GB for embedding model
+- **Base**: ~2.3GB (embedding model + Llama3.2:1b)
 - **Per Document**: ~10MB during processing
 - **Vector Storage**: ~1.5KB per chunk
+- **Llama3.2:1b**: ~1.3GB model size
 
-## 🛡️ Production Considerations
+## Production Considerations
 
 ### Security
 1. Add authentication/authorization

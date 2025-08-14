@@ -190,5 +190,7 @@ class EmbeddingService:
     
     def convert_distance_to_similarity(self, distance: float) -> float:
         """Convert ChromaDB distance to similarity score (0-1)."""
-        # ChromaDB uses L2 distance, convert to similarity
-        return max(0.0, 1.0 - (distance / 2.0))
+        # ChromaDB uses squared L2 distance, convert to similarity
+        # For normalized embeddings, distance ranges from 0 to 4
+        # Convert to similarity where lower distance = higher similarity
+        return max(0.0, 1.0 - (distance / 4.0))

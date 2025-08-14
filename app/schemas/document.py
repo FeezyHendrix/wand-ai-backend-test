@@ -40,6 +40,25 @@ class DocumentResponse(DocumentBase):
 
     class Config:
         from_attributes = True
+        
+    @classmethod
+    def from_orm(cls, obj):
+        data = {
+            'id': obj.id,
+            'filename': obj.filename,
+            'original_filename': obj.original_filename,
+            'file_path': obj.file_path,
+            'file_size': obj.file_size,
+            'file_type': obj.file_type,
+            'content_hash': obj.content_hash,
+            'is_processed': obj.is_processed,
+            'processing_status': obj.processing_status,
+            'processing_error': obj.processing_error,
+            'created_at': obj.created_at,
+            'updated_at': obj.updated_at,
+            'metadata': obj.doc_metadata
+        }
+        return cls(**data)
 
 
 class DocumentChunkBase(BaseModel):

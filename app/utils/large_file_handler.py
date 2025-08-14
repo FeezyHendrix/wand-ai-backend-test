@@ -1,11 +1,11 @@
-import asyncio
 import os
 import tempfile
 from typing import AsyncGenerator, List, Optional
 import aiofiles
 from loguru import logger
-
+from PyPDF2 import PdfReader
 from app.core.config import get_settings
+import psutil
 
 settings = get_settings()
 
@@ -74,8 +74,6 @@ class LargeFileHandler:
     async def process_pdf_in_chunks(self, file_path: str) -> List[str]:
         """Process large PDF files page by page."""
         try:
-            from PyPDF2 import PdfReader
-            
             text_chunks = []
             
             # Process PDF in pages to manage memory
@@ -150,11 +148,10 @@ class LargeFileHandler:
     
     def estimate_processing_time(self, file_size_bytes: int) -> float:
         """Estimate processing time based on file size."""
-        # Simple heuristic: ~1MB per second processing
+ 
         base_rate = 1024 * 1024  # 1MB/sec
         estimated_seconds = file_size_bytes / base_rate
         
-        # Add overhead for larger files
         if file_size_bytes > 100 * 1024 * 1024:  # > 100MB
             estimated_seconds *= 1.5
         
@@ -197,9 +194,7 @@ class LargeFileHandler:
             return {}
     
     async def monitor_memory_usage(self) -> dict:
-        """Monitor current memory usage."""
         try:
-            import psutil
             process = psutil.Process()
             memory_info = process.memory_info()
             
@@ -209,10 +204,6 @@ class LargeFileHandler:
                 "percent": process.memory_percent(),
                 "available_mb": round(psutil.virtual_memory().available / (1024 * 1024), 2)
             }
-            
-        except ImportError:
-            logger.warning("psutil not available for memory monitoring")
-            return {"error": "psutil not available"}
         except Exception as e:
             logger.error(f"Error monitoring memory usage: {str(e)}")
             return {"error": str(e)}

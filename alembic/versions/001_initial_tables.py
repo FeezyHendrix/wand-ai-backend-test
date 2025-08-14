@@ -27,7 +27,7 @@ def upgrade() -> None:
         sa.Column('file_type', sa.String(length=50), nullable=False),
         sa.Column('content_hash', sa.String(length=64), nullable=False),
         sa.Column('raw_content', sa.Text(), nullable=True),
-        sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('doc_metadata', sa.JSON(), nullable=True),
         sa.Column('is_processed', sa.Boolean(), nullable=True),
         sa.Column('processing_status', sa.String(length=50), nullable=True),
         sa.Column('processing_error', sa.Text(), nullable=True),
@@ -46,7 +46,7 @@ def upgrade() -> None:
         sa.Column('content_hash', sa.String(length=64), nullable=False),
         sa.Column('start_char', sa.Integer(), nullable=True),
         sa.Column('end_char', sa.Integer(), nullable=True),
-        sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('chunk_metadata', sa.JSON(), nullable=True),
         sa.Column('vector_id', sa.String(length=255), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint('id')

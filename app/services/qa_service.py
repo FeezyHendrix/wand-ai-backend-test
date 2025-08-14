@@ -1,7 +1,7 @@
 import time
 from typing import Dict, List, Optional
 
-import openai
+import ollama
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
@@ -20,8 +20,7 @@ class QAService:
     
     def __init__(self):
         self.search_service = SearchService()
-        if settings.openai_api_key:
-            openai.api_key = settings.openai_api_key
+        self.ollama_client = ollama.Client(host=settings.ollama_base_url)
         self.max_context_length = 4000  # Conservative limit for context
     
     async def answer_question(
@@ -54,13 +53,14 @@ class QAService:
                     processing_time_ms=round(processing_time, 2)
                 )
             
-            # Generate answer using OpenAI (if available) or fallback
-            if settings.openai_api_key:
-                answer, confidence = await self._generate_answer_with_ai(
+            # Generate answer using Ollama or fallback
+            try:
+                answer, confidence = await self._generate_answer_with_ollama(
                     qa_request.question, 
                     search_results.results
                 )
-            else:
+            except Exception as e:
+                logger.warning(f"Ollama unavailable, using fallback: {str(e)}")
                 answer, confidence = self._generate_answer_fallback(
                     qa_request.question, 
                     search_results.results
@@ -87,12 +87,12 @@ class QAService:
             logger.error(f"Error answering question: {str(e)}")
             raise
     
-    async def _generate_answer_with_ai(
+    async def _generate_answer_with_ollama(
         self, 
         question: str, 
         search_results: List
     ) -> tuple[str, float]:
-        """Generate answer using OpenAI GPT."""
+        """Generate answer using Ollama."""
         try:
             # Prepare context from search results
             context_parts = []
@@ -119,22 +119,14 @@ Instructions:
 - Only use information from the provided context
 - If the context doesn't contain enough information, say so clearly
 - Be specific and cite relevant details from the context
-- Provide a confidence score (0-1) for your answer
+- Keep your answer concise and focused
 
 Answer:"""
 
-            # Call OpenAI API
-            response = await openai.ChatCompletion.acreate(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant that answers questions based on provided context."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=500,
-                temperature=0.3
-            )
+            # Call Ollama API
+            response = await self._call_ollama_async(prompt)
             
-            answer = response.choices[0].message.content.strip()
+            answer = response.strip()
             
             # Extract confidence score (simple heuristic)
             confidence = self._estimate_confidence(answer, search_results)
@@ -142,9 +134,28 @@ Answer:"""
             return answer, confidence
             
         except Exception as e:
-            logger.error(f"Error generating AI answer: {str(e)}")
-            # Fallback to simple answer
-            return self._generate_answer_fallback(question, search_results)
+            logger.error(f"Error generating Ollama answer: {str(e)}")
+            raise  # Re-raise to trigger fallback in calling method
+    
+    async def _call_ollama_async(self, prompt: str) -> str:
+        """Call Ollama API asynchronously."""
+        import asyncio
+        
+        def _call_ollama_sync():
+            response = self.ollama_client.generate(
+                model=settings.ollama_model,
+                prompt=prompt,
+                options={
+                    'temperature': 0.3,
+                    'top_p': 0.9,
+                    'max_tokens': 500
+                }
+            )
+            return response['response']
+        
+        # Run in thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, _call_ollama_sync)
     
     def _generate_answer_fallback(
         self, 
@@ -164,7 +175,7 @@ Answer:"""
             if len(best_result.content) > 300:
                 answer += " [Content truncated]"
             
-            confidence = min(best_result.similarity_score, 0.8)  # Cap at 0.8 for fallback
+            confidence = min(best_result.similarity_score, 0.8)
             
             return answer, confidence
             
@@ -177,13 +188,13 @@ Answer:"""
         if not search_results:
             return 0.0
         
-        # Simple heuristic based on:
+        #  Heuristic based on:
         # 1. Average similarity score of sources
         # 2. Number of sources
         # 3. Answer length and specificity
         
         avg_similarity = sum(r.similarity_score for r in search_results) / len(search_results)
-        source_bonus = min(len(search_results) / 5.0, 0.2)  # Bonus for multiple sources
+        source_bonus = min(len(search_results) / 5.0, 0.2)  
         
         # Check if answer indicates uncertainty
         uncertainty_indicators = [
